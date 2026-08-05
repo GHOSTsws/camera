@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparador Avançado de Câmeras</title>
+    <!-- PapaParse para carregar a planilha local -->
+    <script src="https://cloudflare.com"></script>
+    
+    <style>
+        /* Estilos base para garantir o visual sem depender de internet */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #334155;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #0f172a;
+            margin-bottom: 8px;
+            font-size: 28px;
+        }
+        .grid-seletores {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        @media (min-width: 768px) {
+            .grid-seletores { grid-template-columns: 1fr 1fr; }
+        }
+        .card-seletor {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+        .label-camera {
+            display: block;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+        .flex-inputs {
+            display: flex;
+            gap: 10px;
+        }
+        select {
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background-color: #f8fafc;
+            font-size: 14px;
+            color: #334155;
+            outline: none;
+        }
+        select:focus {
+            border-color: #3b82f6;
+        }
+        .select-marca { width: 35%; }
+        .select-modelo { width: 65%; flex-grow: 1; font-weight: 500; }
+        
+        .tabela-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 600px;
+        }
+        th, td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f1f5f9;
+            color: #475569;
+            font-weight: bold;
+        }
+        #nomeCameraA { color: #2563eb; text-align: center; font-size: 16px; width: 33%; }
+        #nomeCameraB { color: #4f46e5; text-align: center; font-size: 16px; width: 33%; }
+        .col-spec { font-weight: 600; color: #334155; background-color: #f8fafc; width: 34%; }
+        .col-valor { text-align: center; color: #475569; border-left: 1px solid #f1f5f9; }
+        .vazio { color: #cbd5e1; }
+        .placeholder-text {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Comparador de Câmeras Digitais</h1>
+            <p style="color: #64748b; margin: 0;">Selecione dois modelos para analisar as fichas técnicas lado a lado</p>
+        </header>
+
+        <!-- Filtros e Seletores -->
+        <div class="grid-seletores">
+            <!-- Câmera A -->
+            <div class="card-seletor">
+                <label class="label-camera">Câmera A</label>
+                <div class="flex-inputs">
+                    <select id="filtroMarcaA" class="select-marca">
+                        <option value="">Marca</option>
+                    </select>
+                    <select id="selectCameraA" class="select-modelo" disabled>
+                        <option value="">Selecione a marca primeiro</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Câmera B -->
+            <div class="card-seletor">
+                <label class="label-camera">Câmera B</label>
+                <div class="flex-inputs">
+                    <select id="filtroMarcaB" class="select-marca">
+                        <option value="">Marca</option>
+                    </select>
+                    <select id="selectCameraB" class="select-modelo" disabled>
+                        <option value="">Selecione a marca primeiro</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela de Comparação Avançada -->
+        <div class="tabela-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Especificação Técnica</th>
+                        <th id="nomeCameraA">-</th>
+                        <th id="nomeCameraB">-</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabela">
+                    <tr>
+                        <td colspan="3" class="placeholder-text">
+                            Escolha os modelos nos menus acima para iniciar a comparação técnica.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+        <script>
+        let dadosCameras = [];
+        
+        // Mapeamento exato das colunas da sua planilha
+        const especificacoes = [
+            'Ano', 'Tipo', 'Encaixe', 'Sensor', 'MP', 'Processador', 'IBIS', 
+            'Peso (Corpo)', 'Tipo de visor', 'Tela', 'Tela touch', 
+            'Pontos AF (Visor)', 'AF (Display)', 'FPS RAW', 'Buffer RAW', 
+            'Vídeo', 'Entrada de microfone', 'Saída de fone', 'Conectividade'
+        ];
+
+        // Função nativa e robusta para ler o CSV no GitHub Pages
+        async function carregarDadosCSV() {
+            try {
+                // Força a busca pelo arquivo na mesma pasta do GitHub
+                const resposta = await fetch('./cameras.csv');
+                
+                if (!resposta.ok) {
+                    throw new Error("Arquivo não encontrado no servidor.");
+                }
+                
+                const textoDoCSV = await resposta.text();
+                
+                // Processa o CSV manualmente de forma simples e rápida
+                const linhas = textoDoCSV.split(/\r?\n/).filter(linha => linha.trim() !== "");
+                const cabecalhos = linhas[0].split('\t').map(c => c.trim()); // Alinhado para separação por TAB do Excel
+                
+                // Se não funcionar por TAB, tenta por vírgula automática
+                const separador = textoDoCSV.includes('\t') ? '\t' : ',';
+                const colunasCabecalho = linhas[0].split(separador).map(c => c.trim());
+
+                dadosCameras = linhas.slice(1).map((linha, index) => {
+                    const valores = linha.split(separador).map(v => v.trim());
+                    const objetoCamera = { id: String(index) };
+                    
+                    colunasCabecalho.forEach((cabecalho, i) => {
+                        objetoCamera[cabecalho] = valores[i] || "";
+                    });
+                    
+                    return objetoCamera;
+                });
+
+                configurarFiltros();
+
+            } catch (erro) {
+                console.error("Erro ao carregar os dados:", erro);
+                alert("Erro ao ler a planilha. Certifique-se de que o arquivo está na mesma pasta com o nome exatamente em minúsculo: cameras.csv");
+            }
+        }
+
+        function configurarFiltros() {
+            // Extrai as marcas tirando valores vazios ou nulos
+            const marcas = [...new Set(dadosCameras.map(c => c.Marca).filter(Boolean))].sort();
+            
+            const filtroA = document.getElementById('filtroMarcaA');
+            const filtroB = document.getElementById('filtroMarcaB');
+            
+            // Limpa opções antigas se houverem
+            filtroA.innerHTML = '<option value="">Marca</option>';
+            filtroB.innerHTML = '<option value="">Marca</option>';
+            
+            marcas.forEach(marca => {
+                const opt = `<option value="${marca}">${marca}</option>`;
+                filtroA.innerHTML += opt;
+                filtroB.innerHTML += opt;
+            });
+
+            filtroA.onchange = () => atualizarModelos('A');
+            filtroB.onchange = () => atualizarModelos('B');
+            
+            document.getElementById('selectCameraA').onchange = atualizarComparacao;
+            document.getElementById('selectCameraB').onchange = atualizarComparacao;
+        }
+
+        function atualizarModelos(lado) {
+            const marcaSelecionada = document.getElementById(`filtroMarca${lado}`).value;
+            const selectModelo = document.getElementById(`selectCamera${lado}`);
+            
+            if (!marcaSelecionada) {
+                selectModelo.innerHTML = '<option value="">Selecione a marca primeiro</option>';
+                selectModelo.disabled = true;
+                atualizarComparacao();
+                return;
+            }
+
+            const modelosFiltrados = dadosCameras.filter(c => c.Marca === marcaSelecionada);
+            
+            let html = '<option value="">-- Selecione o Modelo --</option>';
+            modelosFiltrados.forEach(c => {
+                if(c.Modelo) {
+                    html += `<option value="${c.id}">${c.Modelo}</option>`;
+                }
+            });
+            
+            selectModelo.innerHTML = html;
+            selectModelo.disabled = false;
+            atualizarComparacao();
+        }
+
+        function atualizarComparacao() {
+            const idA = document.getElementById('selectCameraA').value;
+            const idB = document.getElementById('selectCameraB').value;
+
+            const camA = dadosCameras.find(c => c.id === idA);
+            const camB = dadosCameras.find(c => c.id === idB);
+
+            document.getElementById('nomeCameraA').innerText = camA ? `${camA.Marca} ${camA.Modelo}` : '-';
+            document.getElementById('nomeCameraB').innerText = camB ? `${camB.Marca} ${camB.Modelo}` : '-';
+
+            const corpoTabela = document.getElementById('corpoTabela');
+            
+            if (!camA && !camB) {
+                corpoTabela.innerHTML = `<tr><td colspan="3" class="p-12 text-center text-slate-400 font-medium">Escolha os modelos nos menus acima para iniciar a comparação técnica.</td></tr>`;
+                return;
+            }
+
+            let htmlLinhas = '';
+            especificacoes.forEach(spec => {
+                const valorA = camA && camA[spec] !== undefined && camA[spec] !== "" ? camA[spec] : '<span class="text-slate-300">—</span>';
+                const valorB = camB && camB[spec] !== undefined && camB[spec] !== "" ? camB[spec] : '<span class="text-slate-300">—</span>';
+
+                htmlLinhas += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4 font-semibold text-slate-700 bg-slate-50/50">${spec}</td>
+                        <td class="p-4 text-center border-l border-slate-100 font-medium text-slate-600">${valorA}</td>
+                        <td class="p-4 text-center border-l border-slate-100 font-medium text-slate-600">${valorB}</td>
+                    </tr>
+                `;
+            });
+
+            corpoTabela.innerHTML = htmlLinhas;
+        }
+
+        // Executa a carga do arquivo assim que a página abre no GitHub
+        carregarDadosCSV();
+    </script>
+    <script>
+        let dadosCameras = [];
+        
+        // Mapeamento exato das colunas da sua planilha
+        const especificacoes = [
+            'Ano', 'Tipo', 'Encaixe', 'Sensor', 'MP', 'Processador', 'IBIS', 
+            'Peso (Corpo)', 'Tipo de visor', 'Tela', 'Tela touch', 
+            'Pontos AF (Visor)', 'AF (Display)', 'FPS RAW', 'Buffer RAW', 
+            'Vídeo', 'Entrada de microfone', 'Saída de fone', 'Conectividade'
+        ];
+
+        // Função nativa e robusta para ler o CSV no GitHub Pages
+        async function carregarDadosCSV() {
+            try {
+                // Força a busca pelo arquivo na mesma pasta do GitHub
+                const resposta = await fetch('./cameras.csv');
+                
+                if (!resposta.ok) {
+                    throw new Error("Arquivo não encontrado no servidor.");
+                }
+                
+                const textoDoCSV = await resposta.text();
+                
+                // Processa o CSV manualmente de forma simples e rápida
+                const linhas = textoDoCSV.split(/\r?\n/).filter(linha => linha.trim() !== "");
+                const cabecalhos = linhas[0].split('\t').map(c => c.trim()); // Alinhado para separação por TAB do Excel
+                
+                // Se não funcionar por TAB, tenta por vírgula automática
+                const separador = textoDoCSV.includes('\t') ? '\t' : ',';
+                const colunasCabecalho = linhas[0].split(separador).map(c => c.trim());
+
+                dadosCameras = linhas.slice(1).map((linha, index) => {
+                    const valores = linha.split(separador).map(v => v.trim());
+                    const objetoCamera = { id: String(index) };
+                    
+                    colunasCabecalho.forEach((cabecalho, i) => {
+                        objetoCamera[cabecalho] = valores[i] || "";
+                    });
+                    
+                    return objetoCamera;
+                });
+
+                configurarFiltros();
+
+            } catch (erro) {
+                console.error("Erro ao carregar os dados:", erro);
+                alert("Erro ao ler a planilha. Certifique-se de que o arquivo está na mesma pasta com o nome exatamente em minúsculo: cameras.csv");
+            }
+        }
+
+        function configurarFiltros() {
+            // Extrai as marcas tirando valores vazios ou nulos
+            const marcas = [...new Set(dadosCameras.map(c => c.Marca).filter(Boolean))].sort();
+            
+            const filtroA = document.getElementById('filtroMarcaA');
+            const filtroB = document.getElementById('filtroMarcaB');
+            
+            // Limpa opções antigas se houverem
+            filtroA.innerHTML = '<option value="">Marca</option>';
+            filtroB.innerHTML = '<option value="">Marca</option>';
+            
+            marcas.forEach(marca => {
+                const opt = `<option value="${marca}">${marca}</option>`;
+                filtroA.innerHTML += opt;
+                filtroB.innerHTML += opt;
+            });
+
+            filtroA.onchange = () => atualizarModelos('A');
+            filtroB.onchange = () => atualizarModelos('B');
+            
+            document.getElementById('selectCameraA').onchange = atualizarComparacao;
+            document.getElementById('selectCameraB').onchange = atualizarComparacao;
+        }
+
+        function atualizarModelos(lado) {
+            const marcaSelecionada = document.getElementById(`filtroMarca${lado}`).value;
+            const selectModelo = document.getElementById(`selectCamera${lado}`);
+            
+            if (!marcaSelecionada) {
+                selectModelo.innerHTML = '<option value="">Selecione a marca primeiro</option>';
+                selectModelo.disabled = true;
+                atualizarComparacao();
+                return;
+            }
+
+            const modelosFiltrados = dadosCameras.filter(c => c.Marca === marcaSelecionada);
+            
+            let html = '<option value="">-- Selecione o Modelo --</option>';
+            modelosFiltrados.forEach(c => {
+                if(c.Modelo) {
+                    html += `<option value="${c.id}">${c.Modelo}</option>`;
+                }
+            });
+            
+            selectModelo.innerHTML = html;
+            selectModelo.disabled = false;
+            atualizarComparacao();
+        }
+
+        function atualizarComparacao() {
+            const idA = document.getElementById('selectCameraA').value;
+            const idB = document.getElementById('selectCameraB').value;
+
+            const camA = dadosCameras.find(c => c.id === idA);
+            const camB = dadosCameras.find(c => c.id === idB);
+
+            document.getElementById('nomeCameraA').innerText = camA ? `${camA.Marca} ${camA.Modelo}` : '-';
+            document.getElementById('nomeCameraB').innerText = camB ? `${camB.Marca} ${camB.Modelo}` : '-';
+
+            const corpoTabela = document.getElementById('corpoTabela');
+            
+            if (!camA && !camB) {
+                corpoTabela.innerHTML = `<tr><td colspan="3" class="p-12 text-center text-slate-400 font-medium">Escolha os modelos nos menus acima para iniciar a comparação técnica.</td></tr>`;
+                return;
+            }
+
+            let htmlLinhas = '';
+            especificacoes.forEach(spec => {
+                const valorA = camA && camA[spec] !== undefined && camA[spec] !== "" ? camA[spec] : '<span class="text-slate-300">—</span>';
+                const valorB = camB && camB[spec] !== undefined && camB[spec] !== "" ? camB[spec] : '<span class="text-slate-300">—</span>';
+
+                htmlLinhas += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4 font-semibold text-slate-700 bg-slate-50/50">${spec}</td>
+                        <td class="p-4 text-center border-l border-slate-100 font-medium text-slate-600">${valorA}</td>
+                        <td class="p-4 text-center border-l border-slate-100 font-medium text-slate-600">${valorB}</td>
+                    </tr>
+                `;
+            });
+
+            corpoTabela.innerHTML = htmlLinhas;
+        }
+
+        // Executa a carga do arquivo assim que a página abre no GitHub
+        carregarDadosCSV();
+    </script>
+
